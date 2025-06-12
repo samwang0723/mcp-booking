@@ -2,6 +2,10 @@
 
 An AI-powered Model Context Protocol (MCP) server for restaurant discovery and booking. This server integrates with Google Maps Places API to find restaurants based on location, cuisine preferences, mood, and event type, then provides intelligent recommendations and booking assistance.
 
+<a href="https://glama.ai/mcp/servers/@samwang0723/mcp-booking">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@samwang0723/mcp-booking/badge" alt="Restaurant Booking Server MCP server" />
+</a>
+
 ## 🎯 Key Features
 
 - **Smart Restaurant Search**: Find restaurants within 20km radius with advanced filtering
