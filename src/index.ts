@@ -130,6 +130,112 @@ class RestaurantBookingServer {
         return await this.handleSearchRestaurants(args);
       }
     );
+
+    // Get restaurant details tool
+    server.registerTool(
+      'get_restaurant_details',
+      {
+        title: 'Get detailed restaurant information',
+        description: 'Get comprehensive details about a specific restaurant using its place ID',
+        inputSchema: {
+          placeId: z
+            .string()
+            .describe('Google Places place ID of the restaurant'),
+          locale: z
+            .string()
+            .optional()
+            .describe(
+              'Locale for the response (e.g., "en" for English, "zh-TW" for Traditional Chinese)'
+            ),
+        },
+      },
+      async args => {
+        return await this.handleGetRestaurantDetails(args);
+      }
+    );
+
+    // Get booking instructions tool
+    server.registerTool(
+      'get_booking_instructions',
+      {
+        title: 'Get booking instructions for a restaurant',
+        description: 'Get detailed instructions on how to make a reservation at a specific restaurant',
+        inputSchema: {
+          placeId: z
+            .string()
+            .describe('Google Places place ID of the restaurant'),
+          locale: z
+            .string()
+            .optional()
+            .describe(
+              'Locale for the response (e.g., "en" for English, "zh-TW" for Traditional Chinese)'
+            ),
+        },
+      },
+      async args => {
+        return await this.handleGetBookingInstructions(args);
+      }
+    );
+
+    // Check availability tool
+    server.registerTool(
+      'check_availability',
+      {
+        title: 'Check restaurant availability',
+        description: 'Check if a restaurant has availability for a specific date, time, and party size',
+        inputSchema: {
+          placeId: z
+            .string()
+            .describe('Google Places place ID of the restaurant'),
+          dateTime: z
+            .string()
+            .describe('Desired reservation date and time in ISO format (e.g., "2024-01-15T19:00:00")'),
+          partySize: z
+            .number()
+            .min(1)
+            .max(20)
+            .describe('Number of people in the party (1-20)'),
+        },
+      },
+      async args => {
+        return await this.handleCheckAvailability(args);
+      }
+    );
+
+    // Make reservation tool
+    server.registerTool(
+      'make_reservation',
+      {
+        title: 'Make a restaurant reservation',
+        description: 'Attempt to make a reservation at a restaurant',
+        inputSchema: {
+          placeId: z
+            .string()
+            .describe('Google Places place ID of the restaurant'),
+          dateTime: z
+            .string()
+            .describe('Desired reservation date and time in ISO format (e.g., "2024-01-15T19:00:00")'),
+          partySize: z
+            .number()
+            .min(1)
+            .max(20)
+            .describe('Number of people in the party (1-20)'),
+          contactName: z
+            .string()
+            .describe('Name for the reservation'),
+          contactPhone: z
+            .string()
+            .describe('Phone number for the reservation'),
+          specialRequests: z
+            .string()
+            .optional()
+            .describe('Any special requests or notes for the reservation'),
+        },
+      },
+      async args => {
+        return await this.handleMakeReservation(args);
+      }
+    );
   }
 
   private async handleSearchRestaurants(args: any) {
@@ -219,6 +325,200 @@ class RestaurantBookingServer {
         },
       ],
     };
+  }
+
+  private async handleGetRestaurantDetails(args: any) {
+    try {
+      const restaurant = await this.googleMapsService.getRestaurantDetails(
+        args.placeId,
+        args.locale || 'en'
+      );
+
+      if (!restaurant) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: 'Restaurant not found or unable to retrieve details.',
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(restaurant, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      console.error('Error getting restaurant details:', error);
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: `Error retrieving restaurant details: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleGetBookingInstructions(args: any) {
+    try {
+      // First get the restaurant details
+      const restaurant = await this.googleMapsService.getRestaurantDetails(
+        args.placeId,
+        args.locale || 'en'
+      );
+
+      if (!restaurant) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: 'Restaurant not found or unable to retrieve details.',
+            },
+          ],
+        };
+      }
+
+      // Get booking instructions
+      const instructions = await this.bookingService.getBookingInstructions(restaurant);
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: instructions,
+          },
+        ],
+      };
+    } catch (error) {
+      console.error('Error getting booking instructions:', error);
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: `Error retrieving booking instructions: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleCheckAvailability(args: any) {
+    try {
+      // First get the restaurant details
+      const restaurant = await this.googleMapsService.getRestaurantDetails(
+        args.placeId,
+        'en'
+      );
+
+      if (!restaurant) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: 'Restaurant not found or unable to retrieve details.',
+            },
+          ],
+        };
+      }
+
+      // Check availability
+      const availability = await this.bookingService.checkAvailability(
+        restaurant,
+        args.dateTime,
+        args.partySize
+      );
+
+      const result = {
+        restaurant: {
+          name: restaurant.name,
+          placeId: restaurant.placeId,
+        },
+        requestedDateTime: args.dateTime,
+        partySize: args.partySize,
+        availability,
+      };
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      console.error('Error checking availability:', error);
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: `Error checking availability: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleMakeReservation(args: any) {
+    try {
+      // First get the restaurant details
+      const restaurant = await this.googleMapsService.getRestaurantDetails(
+        args.placeId,
+        'en'
+      );
+
+      if (!restaurant) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: 'Restaurant not found or unable to retrieve details.',
+            },
+          ],
+        };
+      }
+
+      // Create booking request
+      const bookingRequest: BookingRequest = {
+        restaurant,
+        preferredDateTime: args.dateTime,
+        partySize: args.partySize,
+        contactInfo: {
+          name: args.contactName,
+          phone: args.contactPhone,
+        },
+        specialRequests: args.specialRequests,
+      };
+
+      // Attempt to make reservation
+      const bookingResponse = await this.bookingService.makeReservation(bookingRequest);
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(bookingResponse, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      console.error('Error making reservation:', error);
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: `Error making reservation: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
   }
 
   async run() {
