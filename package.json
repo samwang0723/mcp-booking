@@ -32,7 +32,7 @@
   "dependencies": {
     "@googlemaps/google-maps-services-js": "^3.4.2",
     "@googlemaps/places": "^2.1.0",
-    "@modelcontextprotocol/sdk": "^1.17.0",
+    "@modelcontextprotocol/sdk": "^1.17.3",
     "axios": "^1.6.0",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
